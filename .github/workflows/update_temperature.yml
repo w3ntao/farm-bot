@@ -1,0 +1,73 @@
+name: update_temperature
+
+on:
+  schedule:
+    # GitHub Actions cron uses UTC:
+    #         22:00 UTC = 06:00 Beijing,
+    #         14:00 UTC = 22:00 Beijing.
+    - cron: "0 22 * * 1-5"
+    - cron: "0 14 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update_temperature
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout farm-bot
+        uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Checkout quant-tracer
+        uses: actions/checkout@v4
+        with:
+          repository: w3ntao/quant-tracer
+          token: ${{ secrets.KEY_QUANT_TRACER_RECUR }}
+          path: quant-tracer
+          fetch-depth: 0
+          submodules: recursive
+          persist-credentials: true
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+
+      - name: Checkout farm
+        uses: actions/checkout@v4
+        with:
+          repository: w3ntao/farm
+          token: ${{ secrets.KEY_QUANT_TRACER_RECUR }}
+          path: farm
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Prepare repository
+        run: |
+          bash quant-tracer/configure.sh
+
+      - name: Trace stocks
+        working-directory: quant-tracer
+        run: |
+          timeout 5m python quant_tracer.py --temperature
+          mv temperature_*.png ../farm/temperature/
+
+      - name: Commit changes
+        run: |
+          cd farm
+          git add temperature
+          python "$GITHUB_WORKSPACE"/quant-tracer/github_helper.py -commit "[ci-bot] daily temperature"

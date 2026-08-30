@@ -1,0 +1,66 @@
+name: daily_pipeline
+
+on:
+  # 10:00 UTC / 18:00 Beijing time, Monday through Friday.
+  schedule:
+    - cron: "0 10 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: daily_pipeline
+  cancel-in-progress: true
+
+jobs:
+  dispatch-downloaders:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout farm-bot
+        uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Checkout quant-tracer
+        uses: actions/checkout@v4
+        with:
+          repository: w3ntao/quant-tracer
+          token: ${{ secrets.KEY_QUANT_TRACER_RECUR }}
+          path: quant-tracer
+          fetch-depth: 0
+          submodules: recursive
+          persist-credentials: true
+
+      - name: Checkout farm
+        uses: actions/checkout@v4
+        with:
+          repository: w3ntao/farm
+          token: ${{ secrets.KEY_QUANT_TRACER_RECUR }}
+          path: farm
+          fetch-depth: 0
+          persist-credentials: true
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+
+      - name: Prepare repository
+        run: |
+          bash quant-tracer/configure.sh
+
+      - name: Initiate pipeline
+        working-directory: quant-tracer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "schedule" ]] && ! python index_util.py --trade_today; then
+            echo "Today is not a trading day; skip daily pipeline."
+            exit 0
+          fi
+
+          python cron_worker.py --dail_pipeline

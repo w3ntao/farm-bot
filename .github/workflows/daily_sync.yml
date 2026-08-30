@@ -1,0 +1,63 @@
+name: sync-index-daily
+
+on:
+  schedule:
+    # Runs at 18:00 Beijing on weekdays.
+    # GitHub Actions cron uses UTC, so 10:00 UTC = 18:00 Beijing.
+    - cron: "0 10 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+env:
+  CARGO_TERM_COLOR: always
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  sync-index:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout farm-bot
+        uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+          fetch-depth: 1
+          persist-credentials: true
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+
+      - name: Checkout quant-tracer
+        uses: actions/checkout@v4
+        with:
+          repository: w3ntao/quant-tracer
+          token: ${{ secrets.KEY_QUANT_TRACER_RECUR }}
+          path: quant-tracer
+          fetch-depth: 0
+          submodules: recursive
+          persist-credentials: true
+
+      - name: Install dependencies
+        run: |
+          bash quant-tracer/configure.sh
+
+      - name: Sync index members daily
+        working-directory: quant-tracer
+        run: |
+          python index_util.py --daily_sync
+
+      - name: Commit index history changes
+        run: |
+          cd quant-tracer/index_history
+          git add .
+          if git diff --cached --quiet; then
+            echo "No index history changes; exiting."
+            exit 0
+          fi
+
+          python "$GITHUB_WORKSPACE"/quant-tracer/github_helper.py -commit "[sync-daily] update index members"
+          python "$GITHUB_WORKSPACE"/quant-tracer/github_helper.py -issue "[sync-daily] 中证指数成份股更新" "daily"

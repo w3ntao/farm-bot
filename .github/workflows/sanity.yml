@@ -1,0 +1,56 @@
+name: sanity-check
+
+on:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout farm-bot
+        uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+          fetch-depth: 1
+          persist-credentials: true
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.x'
+
+      - name: Checkout quant-tracer
+        uses: actions/checkout@v4
+        with:
+          repository: w3ntao/quant-tracer
+          token: ${{ secrets.KEY_QUANT_TRACER_RECUR }}
+          path: quant-tracer
+          fetch-depth: 0
+          submodules: recursive
+          persist-credentials: true
+
+      - name: Checkout farm
+        uses: actions/checkout@v4
+        with:
+          repository: w3ntao/farm
+          token: ${{ secrets.KEY_QUANT_TRACER_RECUR }}
+          path: farm
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Test token auth
+        run: |
+          git -C quant-tracer/index_history push --dry-run origin HEAD:refs/heads/foo
+          git -C farm push --dry-run origin HEAD:refs/heads/foo
+
+      - name: Prepare quant-tracer
+        run: |
+          bash quant-tracer/configure.sh
+
+      - name: Run
+        working-directory: quant-tracer
+        run: |
+          python -m py_compile *.py
+          python quant_tracer.py

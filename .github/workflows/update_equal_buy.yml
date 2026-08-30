@@ -1,0 +1,70 @@
+name: update_equal_buy
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout farm-bot
+        uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Checkout quant-tracer
+        uses: actions/checkout@v4
+        with:
+          repository: w3ntao/quant-tracer
+          token: ${{ secrets.KEY_QUANT_TRACER_RECUR }}
+          path: quant-tracer
+          fetch-depth: 0
+          submodules: recursive
+          persist-credentials: true
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+
+      - name: Checkout farm
+        uses: actions/checkout@v4
+        with:
+          repository: w3ntao/farm
+          token: ${{ secrets.KEY_QUANT_TRACER_RECUR }}
+          path: farm
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Prepare repository
+        run: |
+          bash quant-tracer/configure.sh
+
+      - name: Trace equal
+        working-directory: quant-tracer
+        run: |
+          timeout 10m python quant_tracer.py --equal50
+          timeout 10m python quant_tracer.py --equal100
+          timeout 10m python quant_tracer.py --equal300
+          timeout 10m python quant_tracer.py --equal500
+
+          mv kechuang50_*.png ../farm/equal50/
+          mv zhongzheng100_*.png ../farm/equal100/
+          mv hushen300_*.png ../farm/equal300/
+          mv zhongzheng500_*.png ../farm/equal500/
+
+      - name: Commit changes
+        run: |
+          cd farm
+          git add equal*
+          python "$GITHUB_WORKSPACE"/quant-tracer/github_helper.py -commit "[ci-bot] weekly equal buy"
