@@ -1,9 +1,9 @@
 name: daily_pipeline
 
 on:
-  # 10:00 UTC / 18:00 Beijing time, Monday through Friday.
+  # 9:00 UTC / 17:00 Beijing time, Monday through Friday.
   schedule:
-    - cron: "0 10 * * 1-5"
+    - cron: "0 9 * * 1-5"
   workflow_dispatch:
 
 permissions:
@@ -63,4 +63,4 @@ jobs:
             exit 0
           fi
 
-          python cron_worker.py --dail_pipeline
+          python cron_worker.py --daily_pipeline
