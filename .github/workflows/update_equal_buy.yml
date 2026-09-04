@@ -53,10 +53,10 @@ jobs:
       - name: Trace equal
         working-directory: quant-tracer
         run: |
-          timeout 10m python quant_tracer.py --equal50
-          timeout 10m python quant_tracer.py --equal100
-          timeout 10m python quant_tracer.py --equal300
-          timeout 10m python quant_tracer.py --equal500
+          python quant_tracer.py --equal50
+          python quant_tracer.py --equal100
+          python quant_tracer.py --equal300
+          python quant_tracer.py --equal500
 
           mv kechuang50_*.png ../farm/equal50/
           mv zhongzheng100_*.png ../farm/equal100/
