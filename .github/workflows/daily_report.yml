@@ -1,21 +1,17 @@
-name: daily_pipeline
+name: daily_report
 
 on:
-  # 9:00 UTC / 17:00 Beijing time, Monday through Friday.
+  # 8:00 UTC -> 16:00 Beijing
   schedule:
-    - cron: "0 9 * * 1-5"
+    - cron: "0 8 * * *"
   workflow_dispatch:
 
 permissions:
-  actions: write
   contents: read
-
-concurrency:
-  group: daily_pipeline
-  cancel-in-progress: true
+  issues: write
 
 jobs:
-  start-pipeline:
+  daily-report:
     runs-on: ubuntu-latest
 
     steps:
@@ -36,15 +32,6 @@ jobs:
           submodules: recursive
           persist-credentials: true
 
-      - name: Checkout farm
-        uses: actions/checkout@v4
-        with:
-          repository: w3ntao/farm
-          token: ${{ secrets.KEY_QUANT_TRACER_RECUR }}
-          path: farm
-          fetch-depth: 0
-          persist-credentials: true
-
       - uses: actions/setup-python@v7
         with:
           python-version: "3.x"
@@ -53,14 +40,9 @@ jobs:
         run: |
           bash quant-tracer/configure.sh
 
-      - name: Initiate pipeline
+      - name: daily report
         working-directory: quant-tracer
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [[ "${GITHUB_EVENT_NAME}" == "schedule" ]] && ! python index_util.py --trade_today; then
-            echo "Today is not a trading day; skip daily pipeline."
-            exit 0
-          fi
-
-          python cron_worker.py --daily_pipeline
+          python quant_tracer.py --daily_report
