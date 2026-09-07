@@ -1,4 +1,4 @@
-name: update_temperature_back_dividend
+name: update_temperature
 
 on:
   schedule:
@@ -12,9 +12,6 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: update_temperature_back_dividend
-  cancel-in-progress: true
 
 jobs:
   update:
@@ -66,12 +63,8 @@ jobs:
           python quant_tracer.py --temperature
           mv temperature_*.png ../farm/temperature/
 
-          python quant_tracer.py --back_dividend
-          mv -f back_dividend_*.png ../farm/back_dividend/
-
-
       - name: Commit changes
         run: |
           cd farm
-          git add temperature back_dividend
-          python "$GITHUB_WORKSPACE"/quant-tracer/github_helper.py -commit "[ci-bot] daily temperature and back_dividend"
+          git add temperature
+          python "$GITHUB_WORKSPACE"/quant-tracer/github_helper.py -commit "[ci-bot] daily temperature"

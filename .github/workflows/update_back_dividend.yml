@@ -1,4 +1,4 @@
-name: update_equal_buy
+name: update_back_dividend
 
 on:
   schedule:
@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+
 
 jobs:
   update:
@@ -54,26 +55,19 @@ jobs:
         run: |
           bash quant-tracer/configure.sh
 
-      - name: Trace equal
+      - name: Trace stocks
         working-directory: quant-tracer
         run: |
-          if [[ "${GITHUB_EVENT_NAME}" == "schedule" ]] && python github_helper.py -recent_modify ../farm/equal50/kechuang50_01.png; then
-            echo "recently modified, skip equal buy"
+          if [[ "${GITHUB_EVENT_NAME}" == "schedule" ]] && python github_helper.py -recent_modify ../farm/back_dividend/back_dividend_01.png; then
+            echo "recently modified, skip back_dividend"
             exit 0
           fi
 
-          python quant_tracer.py --equal50
-          python quant_tracer.py --equal100
-          python quant_tracer.py --equal300
-          python quant_tracer.py --equal500
-
-          mv kechuang50_*.png ../farm/equal50/
-          mv zhongzheng100_*.png ../farm/equal100/
-          mv hushen300_*.png ../farm/equal300/
-          mv zhongzheng500_*.png ../farm/equal500/
+          python quant_tracer.py --back_dividend
+          mv -f back_dividend_*.png ../farm/back_dividend/
 
       - name: Commit changes
         run: |
           cd farm
-          git add equal*
-          python "$GITHUB_WORKSPACE"/quant-tracer/github_helper.py -commit "[ci-bot] weekly equal buy"
+          git add back_dividend
+          python "$GITHUB_WORKSPACE"/quant-tracer/github_helper.py -commit "[ci-bot] daily back_dividend"
