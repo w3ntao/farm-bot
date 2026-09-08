@@ -5,8 +5,8 @@ on:
     # GitHub Actions cron uses UTC:
     #         22:00 UTC = 06:00 Beijing,
     #         14:00 UTC = 22:00 Beijing.
-    - cron: "0 22 * * 1-5"
-    - cron: "0 14 * * 1-5"
+    - cron: "0 22 * * *"
+    - cron: "0 14 * * *"
   workflow_dispatch:
 
 permissions:
