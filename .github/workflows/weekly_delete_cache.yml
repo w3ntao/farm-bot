@@ -1,0 +1,48 @@
+name: delete_cache
+
+on:
+  schedule:
+    # Runs at 24:00 Beijing on Sunday.
+    # GitHub Actions cron uses UTC, so 16:00 UTC = 24:00 Beijing.
+    - cron: "0 16 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout farm-bot
+        uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Checkout quant-tracer
+        uses: actions/checkout@v4
+        with:
+          repository: w3ntao/quant-tracer
+          token: ${{ secrets.KEY_QUANT_TRACER_RECUR }}
+          path: quant-tracer
+          fetch-depth: 0
+          submodules: recursive
+          persist-credentials: true
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+
+      - name: Prepare repository
+        run: |
+          bash quant-tracer/configure.sh
+
+      - name: update
+        working-directory: quant-tracer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python github_helper.py --delete_cache
