@@ -4,7 +4,7 @@ on:
   schedule:
     # Runs at 24:00 Beijing on Sunday.
     # GitHub Actions cron uses UTC, so 16:00 UTC = 24:00 Beijing.
-    - cron: "0 16 * * 0"
+    - cron: "11 16 * * 0"
   workflow_dispatch:
 
 permissions:

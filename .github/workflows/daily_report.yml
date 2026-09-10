@@ -1,21 +1,66 @@
 name: daily_report
 
 on:
-  # 8:00 UTC -> 16:00 Beijing
+  # GitHub Actions is busiest at the start of an hour.  Keep three staggered
+  # attempts in the first half-hour after 16:00 Beijing so a delayed/dropped
+  # schedule event has a chance to be replaced by another one.
   schedule:
-    - cron: "0 8 * * *"
+    - cron: "07 8 * * *"
+    - cron: "17 8 * * *"
+    - cron: "27 8 * * *"
+    - cron: "37 8 * * *"
   workflow_dispatch:
+    inputs:
+      force:
+        description: Run even when today's report issue already exists
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
   issues: write
 
+# The fallback schedules may overlap.  Serialize them so a queued retry can
+# perform the idempotency check after the first attempt has finished.
+concurrency:
+  group: daily-report-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   daily-report:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
+      - name: Skip duplicate scheduled report
+        id: guard
+        env:
+          FORCE_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.force || false }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$FORCE_RUN" = "true" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          report_date="$(date -u +%F)"
+          existing="$(gh issue list \
+            --repo "$GITHUB_REPOSITORY" \
+            --state all \
+            --search "created:${report_date} in:title 市场情绪" \
+            --limit 1 \
+            --json number \
+            --jq 'length')"
+          if [ "$existing" -gt 0 ]; then
+            echo "A report issue already exists for ${report_date}; skipping this retry."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout farm-bot
+        if: steps.guard.outputs.skip != 'true'
         uses: actions/checkout@v4
         with:
           token: ${{ github.token }}
@@ -23,6 +68,7 @@ jobs:
           persist-credentials: true
 
       - name: Checkout quant-tracer
+        if: steps.guard.outputs.skip != 'true'
         uses: actions/checkout@v4
         with:
           repository: w3ntao/quant-tracer
@@ -33,14 +79,17 @@ jobs:
           persist-credentials: true
 
       - uses: actions/setup-python@v7
+        if: steps.guard.outputs.skip != 'true'
         with:
           python-version: "3.x"
 
       - name: Prepare repository
+        if: steps.guard.outputs.skip != 'true'
         run: |
           bash quant-tracer/configure.sh
 
       - name: daily report
+        if: steps.guard.outputs.skip != 'true'
         working-directory: quant-tracer
         env:
           GH_TOKEN: ${{ github.token }}

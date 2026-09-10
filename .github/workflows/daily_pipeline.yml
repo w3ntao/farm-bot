@@ -3,7 +3,7 @@ name: daily_pipeline
 on:
   # 9:00 UTC / 17:00 Beijing time, Monday through Friday.
   schedule:
-    - cron: "0 9 * * 1-5"
+    - cron: "11 9 * * 1-5"
   workflow_dispatch:
 
 permissions:
