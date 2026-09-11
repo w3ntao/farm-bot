@@ -1,21 +1,7 @@
 name: daily_report
 
 on:
-  # GitHub Actions is busiest at the start of an hour.  Keep three staggered
-  # attempts in the first half-hour after 16:00 Beijing so a delayed/dropped
-  # schedule event has a chance to be replaced by another one.
-  schedule:
-    - cron: "07 8 * * *"
-    - cron: "17 8 * * *"
-    - cron: "27 8 * * *"
-    - cron: "37 8 * * *"
   workflow_dispatch:
-    inputs:
-      force:
-        description: Run even when today's report issue already exists
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   contents: read
@@ -36,7 +22,7 @@ jobs:
       - name: Skip duplicate scheduled report
         id: guard
         env:
-          FORCE_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.force || false }}
+          FORCE_RUN: ${{ github.event_name == 'workflow_dispatch' || false }}
           GH_TOKEN: ${{ github.token }}
         run: |
           if [ "$FORCE_RUN" = "true" ]; then
@@ -48,7 +34,7 @@ jobs:
           existing="$(gh issue list \
             --repo "$GITHUB_REPOSITORY" \
             --state all \
-            --search "created:${report_date} in:title 市场情绪" \
+            --search "created:${report_date} in:title Market" \
             --limit 1 \
             --json number \
             --jq 'length')"
@@ -60,7 +46,6 @@ jobs:
           fi
 
       - name: Checkout farm-bot
-        if: steps.guard.outputs.skip != 'true'
         uses: actions/checkout@v4
         with:
           token: ${{ github.token }}
@@ -68,7 +53,6 @@ jobs:
           persist-credentials: true
 
       - name: Checkout quant-tracer
-        if: steps.guard.outputs.skip != 'true'
         uses: actions/checkout@v4
         with:
           repository: w3ntao/quant-tracer
@@ -79,12 +63,10 @@ jobs:
           persist-credentials: true
 
       - uses: actions/setup-python@v7
-        if: steps.guard.outputs.skip != 'true'
         with:
           python-version: "3.x"
 
       - name: Prepare repository
-        if: steps.guard.outputs.skip != 'true'
         run: |
           bash quant-tracer/configure.sh
 

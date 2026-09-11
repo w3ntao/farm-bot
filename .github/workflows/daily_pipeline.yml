@@ -1,14 +1,18 @@
 name: daily_pipeline
 
 on:
-  # 9:00 UTC / 17:00 Beijing time, Monday through Friday.
+  # 9:00 UTC -> 17:00 Beijing time, Monday through Friday.
   schedule:
     - cron: "11 9 * * 1-5"
+    - cron: "21 9 * * 1-5"
+    - cron: "31 9 * * 1-5"
+    - cron: "41 9 * * 1-5"
+    - cron: "51 9 * * 1-5"
   workflow_dispatch:
 
 permissions:
   actions: write
-  contents: read
+  contents: write
 
 concurrency:
   group: daily_pipeline
@@ -58,9 +62,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [[ "${GITHUB_EVENT_NAME}" == "schedule" ]] && ! python index_util.py --trade_today; then
-            echo "Today is not a trading day; skip daily pipeline."
-            exit 0
+          if [[ "${GITHUB_EVENT_NAME}" == "schedule" ]]; then
+            if ! python index_util.py --trade_today; then
+              echo "Today is not a trading day; skip daily pipeline."
+              exit 0
+            fi
+
+            if python github_helper.py --today_cache_tag_created; then
+              echo "Pipeline already running; skip this schedule."
+              exit 0
+            fi
           fi
 
           python cron_worker.py --daily_pipeline
