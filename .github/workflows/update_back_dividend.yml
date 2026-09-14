@@ -66,8 +66,6 @@ jobs:
           python quant_tracer.py --back_dividend
           mv -f back_dividend_*.png ../farm/back_dividend/
 
-      - name: Commit changes
-        run: |
           cd farm
           git add back_dividend
           python "$GITHUB_WORKSPACE"/quant-tracer/github_helper.py -commit "[ci-bot] daily back_dividend"
