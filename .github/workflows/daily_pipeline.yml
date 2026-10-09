@@ -7,10 +7,6 @@ on:
 
   schedule:
     - cron: "47  8 * * 1-5"
-    - cron: "11  9 * * 1-5"
-    - cron: "47  9 * * 1-5"
-    - cron: "11 10 * * 1-5"
-    - cron: "47 10 * * 1-5"
 
   workflow_dispatch:
 
