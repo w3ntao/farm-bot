@@ -46,9 +46,10 @@ jobs:
           bash quant-tracer/configure.sh
 
       - name: Sync index members weekly
+        timeout-minutes: 5
         working-directory: quant-tracer
         run: |
-          python index_util.py --weekly_sync
+          python -u -X faulthandler index_util.py --weekly_sync
 
       - name: Commit index history changes
         run: |
